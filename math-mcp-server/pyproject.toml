@@ -7,7 +7,9 @@ authors = [
     { name = "pranav", email = "pranav.madhahar@gmail.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "fastmcp>=4.0.1",
+]
 
 [project.scripts]
 math-mcp-server = "math_mcp_server:main"
