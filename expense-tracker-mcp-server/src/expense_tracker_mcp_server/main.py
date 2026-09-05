@@ -2,15 +2,21 @@ from fastmcp import FastMCP
 import os
 import sqlite3
 
+
+# Build paths relative to this Python file
 DB_PATH = os.path.join(os.path.dirname(__file__), "expense_tracker.db")
 CATEGORIES_PATH = os.path.join(os.path.dirname(__file__), "categories.json")
 
+
+# Create the MCP server
 mcp = FastMCP("Expense Tracker")
 
 
 def init_db():
+    # Create the database/table if they do not already exist
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -21,10 +27,12 @@ def init_db():
             date TEXT NOT NULL
         )
     ''')
+
     conn.commit()
     conn.close()
 
 
+# Initialize the database when the server starts
 init_db()
 
 
@@ -43,6 +51,8 @@ def add_expense(
     expense://categories resource as the authoritative list.
     Do not invent new categories or subcategories.
     """
+
+    # Use the current date/time when no date is provided
     if not date:
         from datetime import datetime
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -50,6 +60,7 @@ def add_expense(
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # ? placeholders safely bind the supplied values
     cursor.execute('''
         INSERT INTO expenses (amount, category, subcategory, note, date)
         VALUES (?, ?, ?, ?, ?)
@@ -64,9 +75,11 @@ def add_expense(
 @mcp.tool()
 def list_expenses(category: str = '', subcategory: str = ''):
     """List all expenses, optionally filtered by category and subcategory."""
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # Start with all expenses and add filters when provided
     query = "SELECT * FROM expenses"
     params = []
 
@@ -80,9 +93,12 @@ def list_expenses(category: str = '', subcategory: str = ''):
         query += " WHERE subcategory = ?"
         params.append(subcategory)
 
+    # Keep results in ID order
     query += " ORDER BY id"
+
     cursor.execute(query, params)
     expenses = cursor.fetchall()
+
     conn.close()
 
     return expenses
@@ -104,10 +120,11 @@ def edit_expenses(
     expense://categories resource as the authoritative list.
     Do not invent new categories or subcategories.
     """
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
-    # Build the update query dynamically based on provided parameters
+    # Build the UPDATE query only for fields that were provided
     updates = []
     params = []
 
@@ -131,13 +148,18 @@ def edit_expenses(
         updates.append("date = ?")
         params.append(date)
 
+    # Nothing was supplied to update
     if not updates:
         return "No fields to update."
 
+    # Add the expense ID for the WHERE condition
     params.append(expense_id)
+
+    # Join only the fields that need to be updated
     query = f"UPDATE expenses SET {', '.join(updates)} WHERE id = ?"
 
     cursor.execute(query, params)
+
     conn.commit()
     conn.close()
 
@@ -147,9 +169,11 @@ def edit_expenses(
 @mcp.tool()
 def delete_expense(expense_id: int):
     """Delete an expense by its ID."""
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # Delete only the expense matching the supplied ID
     cursor.execute(
         "DELETE FROM expenses WHERE id = ?",
         (expense_id,)
@@ -164,6 +188,8 @@ def delete_expense(expense_id: int):
 @mcp.tool()
 def add_credit(amount: float, note: str = '', date: str = ''):
     """Record a received credit."""
+
+    # Use the current date/time when no date is supplied
     if not date:
         from datetime import datetime
         date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -171,6 +197,7 @@ def add_credit(amount: float, note: str = '', date: str = ''):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # Credits are stored in the same table using a special category
     cursor.execute('''
         INSERT INTO expenses (amount, category, subcategory, note, date)
         VALUES (?, 'Credit', '', ?, ?)
@@ -185,14 +212,17 @@ def add_credit(amount: float, note: str = '', date: str = ''):
 @mcp.tool()
 def list_credits():
     """List all received credits."""
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # Retrieve records marked as Credit
     cursor.execute(
         "SELECT * FROM expenses WHERE category = 'Credit'"
     )
 
     credits = cursor.fetchall()
+
     conn.close()
 
     return credits
@@ -205,9 +235,12 @@ def spending_summary(
     end_date: str = ''
 ):
     """Provide a summary of spending by category."""
+
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # SUM() calculates total spending for each category
+    # Credits are excluded from spending calculations
     query = '''
         SELECT category, SUM(amount) AS total_spent
         FROM expenses
@@ -216,6 +249,7 @@ def spending_summary(
 
     params = []
 
+    # Add optional filters dynamically
     if category:
         query += " AND category = ?"
         params.append(category)
@@ -228,16 +262,20 @@ def spending_summary(
         query += " AND date <= ?"
         params.append(end_date)
 
+    # Group totals by category
     query += " GROUP BY category"
 
     cursor.execute(query, params)
 
     summary = cursor.fetchall()
+
     conn.close()
 
     return summary
 
 
+# MCP resource version — currently disabled
+#
 # @mcp.resource(
 #     "expense://categories",
 #     mime_type="application/json"
@@ -245,19 +283,20 @@ def spending_summary(
 # def categories():
 #     """
 #     Authoritative list of valid expense categories and subcategories.
-
-#     Use this resource when selecting a category or subcategory
-#     for an expense. Do not invent new categories or subcategories.
 #     """
 #     with open(CATEGORIES_PATH, "r", encoding="utf-8") as f:
 #         return f.read()
 
+
 @mcp.tool()
 def get_categories():
     """Return the authoritative list of expense categories and subcategories."""
+
+    # Read valid categories from the JSON file
     with open(CATEGORIES_PATH, "r", encoding="utf-8") as f:
         return f.read()
 
 
 if __name__ == "__main__":
+    # Start the MCP server when this file is executed directly
     mcp.run()
