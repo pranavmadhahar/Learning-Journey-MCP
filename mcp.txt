@@ -1,284 +1,946 @@
-### MCP (Model Context Protocol):
+# MCP (Model Context Protocol)
 
--- A standardized protocol that allows AI applications
-   to interact with external tools, resources, and services.
+-- A standardized protocol that allows AI applications to
+interact with external tools, resources, and services.
 
 -- MCP servers expose capabilities.
+
 -- MCP clients connect AI applications to those capabilities.
 
 -- Mental model:
-   MCP is like a standardized API/interface designed
-   specifically for AI applications.
+MCP is like a standardized API/interface designed
+specifically for AI-to-tool/service interaction.
 
-### MCP STANDARDIZATION
+# MCP ARCHITECTURE
+
+```text
+                    AI Application / Host
+                           │
+                    ┌──────┴──────┐
+                    │ MCP Client  │
+                    └──────┬──────┘
+                           │
+                    MCP Protocol
+                    (JSON-RPC 2.0)
+                           │
+                    ┌──────┴──────┐
+                    │ MCP Server  │
+                    └──────┬──────┘
+                           │
+              ┌────────────┼────────────┐
+              ↓            ↓            ↓
+            Tools       Resources     Prompts
+              │            │            │
+              ↓            ↓            ↓
+          Actions        Data        Templates
+```
+
+-- Host / AI Application:
+The application containing or using the LLM.
+
+Examples:
+Claude Desktop
+A custom LangChain application
+
+-- MCP Client:
+The component that manages the MCP connection
+between the AI application and an MCP server.
+
+-- MCP Server:
+A program that exposes capabilities through MCP.
+
+-- Important:
+The LLM does not directly establish the MCP connection.
+The host/application mediates communication through
+the MCP client.
+
+# MCP STANDARDIZATION
 
 -- Before MCP:
-   Different APIs/services had their own interfaces,
-   input/output formats, tool definitions, and interaction patterns.
+
+Different APIs/services had their own interfaces,
+input/output formats, tool definitions, and
+interaction patterns.
 
 -- MCP:
--- Provides a standardized protocol for AI applications
-   to discover and interact with external tools, resources,
-   and services.
+
+Provides a standardized protocol for AI applications
+to discover and interact with external tools, resources,
+and services.
 
 -- MCP does NOT make every tool use the same inputs.
--- Each tool can have its own schema based on its functionality.
+
+-- Each tool can have its own schema based on its
+functionality.
 
 -- MCP standardizes HOW the AI application communicates
-   with and uses those capabilities.
+with and uses those capabilities.
 
 -- Mental model:
-   MCP is like a standardized interface/protocol
-   designed for AI-to-tool/service interaction.
 
-### MCP SERVER COMPONENTS: TOOLS, RESOURCES & PROMPTS
+MCP is like a standardized interface/protocol
+designed for AI-to-tool/service interaction.
 
--- Tools:
-   Actions/functions that an AI application can invoke
-   through an MCP server to perform an operation.
+# MCP SERVER COMPONENTS:
 
--- Examples:
-   Create a GitHub issue
-   Send an email
-   Query a database
-   Read or modify a file
+# TOOLS, RESOURCES & PROMPTS
 
--- Resources:
-   Data/context that an AI application can access
-   through an MCP server.
+## Tools
+
+-- Actions/functions that an AI application can invoke
+through an MCP server to perform an operation.
 
 -- Examples:
-   Files
-   Database records
-   Documentation
-   Application data
 
--- Prompts:
-   Predefined/reusable instructions or templates
-   exposed by an MCP server for an AI application.
-
-   They provide guidance on how the AI should
-   perform a particular task.
+Create a GitHub issue
+Send an email
+Query a database
+Read or modify a file
 
 -- Mental model:
-   Tool     → Do something/actions
-   Resource → Give me data/information
-   Prompt   → Guide the AI
 
-The MCP client retrieves the prompt from the MCP server and makes it available to the LLM/application; 
-the LLM itself doesn't directly communicate with the MCP server.
+Tool → Do something / perform an action
 
-### URI - URL
+## Resources
 
-   URI → Identifies a resource.
-   URL → A URI that also specifies where/how to access the resource.
+-- Data/context that an AI application can access
+through an MCP server.
 
-### JSON-RPC 2.0
+-- Examples:
 
-   JSON-RPC 2.0 is a lightweight protocol for making
-   remote procedure calls using JSON.
+Files
+Database records
+Documentation
+Application data
 
-   It defines a standardized structure for communication
-   between a client and server.
+-- Resources are generally intended to provide data/context
+rather than perform an action.
 
--- A request generally contains:
-   method → operation to perform
-   params → arguments for the operation
-   id → identifies the request
+-- Mental model:
+
+Resource → Give me data/information
+
+## Prompts
+
+-- Predefined/reusable instructions or templates
+exposed by an MCP server for an AI application.
+
+-- They provide guidance for performing a particular task.
+
+-- The MCP client/host retrieves the prompt from the
+MCP server and makes it available to the application/LLM.
+
+-- The LLM does not directly establish an MCP connection.
+
+-- Mental model:
+
+Prompt → Guide the AI
+
+## Simple Mental Model
+
+```text
+Tool      → Do something
+Resource  → Give me data
+Prompt    → Guide the AI
+```
+
+# MCP TOOL SCHEMAS
+
+-- An MCP tool generally provides:
+
+name
+description
+input schema
+
+-- The input schema describes what arguments the tool accepts.
 
 -- Example:
 
+Tool:
+name: add
+description: Add two numbers
+
+```
+   input:
+       x → number
+       y → number
+```
+
+-- The LLM/application can use the tool definition
+to understand how the tool should be called.
+
+# TOOL DISCOVERY
+
+-- MCP allows clients to discover capabilities exposed
+by an MCP server.
+
+-- The client can ask the server what tools, resources,
+and prompts are available.
+
+-- Mental model:
+
+Discovery → What can you do?
+Invocation → Do this operation.
+
+-- Example:
+
+```text
+Client → MCP Server
+        "What tools do you provide?"
+
+Server → Client
+        add
+        subtract
+        multiply
+        divide
+        modulus
+        square_root
+```
+
+-- This allows the client/application to discover
+capabilities instead of hardcoding every capability
+into the client.
+
+# MCP LIFECYCLE
+
+-- Client establishes a connection with the MCP server.
+
+-- Client and server initialize the MCP session.
+
+-- Client discovers the server's available capabilities.
+
+-- The application makes relevant tools, resources,
+and prompts available to the LLM.
+
+-- The LLM determines when a capability is needed.
+
+-- The host/client sends the appropriate MCP request.
+
+-- The MCP server performs the operation.
+
+-- The server returns the result to the client.
+
+-- The application provides the result back to the LLM
+so it can continue processing.
+
+# URI vs URL
+
+-- URI:
+Identifies a resource.
+
+-- URL:
+A URI that also specifies where/how the resource
+can be accessed.
+
+-- Mental model:
+
+URI → What resource?
+URL → What resource + where/how to access it?
+
+# JSON-RPC 2.0
+
+-- JSON-RPC 2.0 is a lightweight protocol for making
+remote procedure calls using JSON.
+
+-- It defines a standardized structure for communication
+between a client and server.
+
+## Request
+
+-- A request generally contains:
+
+jsonrpc → protocol version
+method  → operation to perform
+params  → arguments for the operation
+id      → identifies the request
+
+-- Example:
+
+```json
 {
-"jsonrpc": "2.0",
-"method": "get_user",
-"params": {
-"id": 10
-},
-"id": 1
+  "jsonrpc": "2.0",
+  "method": "get_user",
+  "params": {
+    "id": 10
+  },
+  "id": 1
 }
+```
 
-The server processes the request and returns a response.
+-- The server processes the request and returns
+a response.
 
--- Response contains:
-   result → successful result
-   error  → error information
-   id     → matches the original request
+## Response
 
-   MCP uses JSON-RPC 2.0 as the messaging format
-   between MCP clients and MCP servers.
+-- Successful response contains:
 
--- Mental model:
-   JSON-RPC → standardized structure for
-   "request something → receive a response"
+result → successful result
+id     → matches the original request
 
-### TRANSPORT
+-- Failed response contains:
 
-   Transport defines HOW messages are physically exchanged
-   between an MCP client and MCP server.
+error  → error information
+id     → matches the original request
 
--- stdio:
-   Client and server communicate through standard input/output.
-   Common when the MCP server runs as a local process.
-
--- Streamable HTTP:
-   Client and server communicate over HTTP.
-   Useful when the MCP server is running as a remote service.
-
-
-### MCP CLIENT COMPONENTS: ROOTS, SAMPLING & ELICITATION
-
--- Roots:
-   Define filesystem locations that the MCP client/host
-   makes available to an MCP server.
-   They limit which folders/resources the server can access.
-   Example: A shared project folder.
-
--- Sampling:
-   Allows an MCP server to request an LLM completion
-   from the MCP client/host.
-   The client/host controls which LLM is used and whether
-   the request is allowed.
-
--- Elicitation:
-   Allows an MCP server to request additional information
-   from the user through the MCP client.
-   Example: Asking the user to provide a missing value
-   or confirm an action.
+-- MCP uses JSON-RPC 2.0 as the messaging format
+between MCP clients and MCP servers.
 
 -- Mental model:
-   Roots      → Where can the server access?
-   Sampling   → Ask the LLM to generate something.
-   Elicitation → Ask the user for information.
 
+JSON-RPC → standardized structure for
+"request something → receive a response"
 
-### MCP 2.0
+## Notification
 
--- Stateless Protocol:
+-- A notification is a message that does not require
+a response.
 
-   MCP 2.0 enables stateless server architectures.
-   Requests do not need to remain tied to a particular
-   MCP server instance.
+-- Unlike a request, it does not contain a request ID.
 
-   This allows ordinary load-balancing strategies such as
-   round-robin to distribute requests across server instances.
+-- Useful for informing the other side that something
+happened or changed.
+
+# TRANSPORT
+
+-- Transport defines HOW messages are exchanged
+between an MCP client and MCP server.
+
+## stdio
+
+-- Client and server communicate through standard
+input/output.
+
+-- Common when the MCP server runs as a local process.
+
+-- Example:
+
+```text
+Claude / LangChain
+       │
+      stdio
+       │
+       ↓
+FastMCP Server
+```
+
+## Streamable HTTP
+
+-- Client and server communicate over HTTP.
+
+-- Useful when the MCP server runs as a network service
+or remote service.
+
+# LOCAL vs REMOTE MCP
+
+## Local MCP
+
+-- MCP server runs as a local process.
+
+-- Example:
+
+```text
+Claude Desktop
+      │
+    stdio
+      │
+      ↓
+Local FastMCP Server
+```
+
+## Remote MCP
+
+-- MCP server runs as a network service.
+
+-- Example:
+
+```text
+AI Application
+      │
+    HTTP
+      │
+      ↓
+Remote MCP Server
+```
+
+# MCP CLIENT CAPABILITIES
+
+-- MCP clients can provide capabilities that allow
+servers to interact with the host/application.
+
+## Roots
+
+-- Define filesystem locations that the MCP client/host
+makes available to an MCP server.
+
+-- They can communicate which directories are relevant
+or permitted for the server to work with.
+
+-- Example:
+
+A shared project folder.
+
+-- Mental model:
+
+Roots → Where can the server work?
+
+## Sampling
+
+-- Allows an MCP server to request an LLM completion
+from the MCP client/host.
+
+-- The client/host controls which LLM is used and
+whether the request is allowed.
+
+-- Mental model:
+
+Sampling → Ask the host's LLM to generate something.
+
+## Elicitation
+
+-- Allows an MCP server to request additional information
+from the user through the MCP client.
+
+-- Example:
+
+Asking the user for a missing value
+Asking the user to confirm an action
+
+-- Mental model:
+
+Elicitation → Ask the user for information.
+
+## Simple Mental Model
+
+```text
+Roots       → Where can the server work?
+Sampling    → Ask the LLM to generate something
+Elicitation → Ask the user for information
+```
+
+# MCP REQUEST FLOW
+
+-- Example: User asks an AI:
+
+"Calculate the square root of 25."
+
+```text
+User
+ ↓
+AI Application / Host
+ ↓
+LLM decides a math tool is needed
+ ↓
+MCP Client
+ ↓
+MCP Server
+ ↓
+square_root(25)
+ ↓
+Result: 5
+ ↓
+MCP Client
+ ↓
+AI Application / LLM
+ ↓
+User receives answer
+```
+
+-- The important point:
+
+The LLM decides what capability is needed,
+while the host/client handles the actual MCP communication.
+
+# CLAUDE AND LANGCHAIN AS MCP CLIENTS
+
+## Claude Desktop
+
+-- Claude Desktop acts as the AI application/host.
+
+-- It can use MCP clients to connect to configured
+MCP servers.
+
+-- Example:
+
+```text
+Claude Desktop
+      │
+   MCP Client
+      │
+    stdio
+      │
+      ↓
+Math MCP Server
+```
+
+## LangChain
+
+-- A LangChain application can act as an MCP client.
+
+-- `MultiServerMCPClient` can connect to multiple
+MCP servers.
+
+-- Example:
+
+```text
+LangChain Application
+        │
+MultiServerMCPClient
+        │
+   ┌────┴────┐
+   ↓         ↓
+ Math    Expense Tracker
+ Server       Server
+```
+
+-- The MCP server does not need to know whether its
+client is Claude, LangChain, or another MCP-compatible
+application.
+
+# MCP SERVER CONFIGURATION
+
+-- A client needs configuration describing how to
+connect to an MCP server.
+
+-- Example using LangChain:
+
+```python
+SERVERS = {
+    "math": {
+        "transport": "stdio",
+        "command": "/path/to/uv",
+        "args": [
+            "run",
+            "fastmcp",
+            "run",
+            "src/math_mcp_server/main.py"
+        ],
+        "cwd": "/path/to/math-mcp-server"
+    }
+}
+```
+
+-- `transport`:
+Defines the communication mechanism.
+
+-- `command`:
+Program used to start the MCP server.
+
+-- `args`:
+Arguments passed to the command.
+
+-- `cwd`:
+Working directory in which the server is started.
+
+-- With Claude Desktop, the server is configured in
+Claude's MCP configuration rather than through
+`MultiServerMCPClient`.
+
+# ADVANCED / RECENT MCP CONCEPTS
+
+## Stateless Servers
+
+-- MCP servers can be designed so that requests do not
+depend on server-side session state.
+
+-- Stateless architectures make horizontal scaling
+and load balancing easier.
+
+-- Example:
+
+```text
+              Load Balancer
+              /     |     \
+             ↓      ↓      ↓
+          Server  Server  Server
+             1      2       3
+```
 
 -- Benefits:
-   Better scalability
-   Higher availability
-   Easier horizontal scaling
-   Simpler operations
 
--- Elicitation:
+Better scalability
+Higher availability
+Easier horizontal scaling
+Simpler operations
 
-   Allows an MCP server to request additional information
-   from the user through the MCP client.
+## Tasks
 
-   The request can be paused while waiting for user input.
+-- Used for operations whose results may not be immediately
+available.
 
-   The client returns the user's response so processing
-   can continue.
+-- Useful for longer-running or asynchronous operations.
 
-   In a stateless architecture, the request can be handled
-   by another server instance after the user responds.
+-- Allows an operation to be represented as a task whose
+result can become available later.
 
-   This allows server instances to remain available for
-   other requests instead of holding server-side state
-   while waiting for the user.
+## Elicitation in Long-Running Operations
 
--- MCP Method & MCP Name:
+-- A server may need additional information from the user
+before continuing.
 
-   Additional request metadata can identify the MCP
-   operation and target name.
+-- The server can request that information through the
+client.
 
-   This information can help infrastructure such as
-   load balancers, routers, and rate limiters make
-   routing decisions without deeply inspecting the request.
+-- The operation can then continue after the user responds.
 
--- Benefits:
-   Faster routing
-   Better load balancing
-   More targeted rate limiting
-   Improved security/control
+-- In a scalable architecture, application design can avoid
+requiring one server instance to remain blocked while
+waiting for user input.
 
--- Caching:
+## MCP Apps
 
-   Stores previously generated results so they can be
-   reused instead of recomputed.
+-- MCP Apps allow MCP servers to provide interactive
+user interfaces alongside tool functionality.
+
+-- This allows MCP interactions to go beyond plain
+text/tool results and provide richer UI experiences.
+
+## Caching
+
+-- Stores previously generated or retrieved results so
+they can potentially be reused.
 
 -- TTL (Time To Live):
-   How long a cached result remains valid.
+How long a cached result remains valid.
 
 -- Cache scope:
-   Determines who can reuse the cached result,
-   such as one user or multiple users.
+Determines who can reuse the cached result.
 
 -- Benefits:
-   Less server/LLM load
-   Faster responses
-   Lower cost
 
--- Tracing:
+Less server/LLM load
+Faster responses
+Lower cost
 
-   Distributed tracing tracks a request across the
-   different components involved in processing it.
+## Tracing
+
+-- Distributed tracing tracks a request across the
+different components involved in processing it.
 
 -- W3C Trace Context uses headers such as:
-   traceparent
-   tracestate
+
+traceparent
+tracestate
 
 -- Helps provide:
-   End-to-end visibility
-   Faster debugging
-   Easier identification of bottlenecks/failures
 
--- MCP Apps:
+End-to-end visibility
+Faster debugging
+Easier identification of bottlenecks/failures
 
--- Task Extensions:
+## Security
 
--- Security & Deprecation: 
+-- MCP implementations need to consider:
 
+Authentication
+Authorization
+User consent
+Data access
+Tool execution safety
+Input validation
 
-### MCP Libraries:
+-- Important:
 
--- MCP SDK:
+An MCP tool can potentially perform real-world actions,
+so tool access should be treated as a security boundary.
 
- - launched by anthropic and contains:
+# MCP SDK
 
-   mcp-server
-   mcp-client
-   mcp-cli - for running mcp commands 
+-- MCP SDK provides the core building blocks for
+implementing MCP clients and servers.
 
- - for installing all the above three:
+-- It provides APIs for:
 
-   pip install mcp[cli] 
+MCP servers
+MCP clients
+MCP protocol communication
+MCP CLI/development tooling
 
-MCP SDK was very verbose and boilerplate heavy.
+-- Python installation:
 
+```bash
+pip install "mcp[cli]"
+```
 
--- FastMCP:
+-- The lower-level SDK can involve more protocol-level
+code and boilerplate.
 
-FastMCP adds abstraction layer over MCP SDK, 
-which is very beginner friendly and fast to develop mcp servers and clients
+# FastMCP
 
-- for installing:
+-- FastMCP provides a higher-level abstraction for
+building MCP applications.
 
+-- It makes MCP server development simpler and faster.
+
+-- Example:
+
+```python
+from fastmcp import FastMCP
+
+mcp = FastMCP("math-server")
+
+@mcp.tool()
+async def add(x, y):
+    return x + y
+```
+
+-- `@mcp.tool()` exposes the Python function as
+an MCP tool.
+
+-- Installation:
+
+```bash
 pip install fastmcp
+```
+
+-- FastMCP can be used for both MCP server and
+client development.
+
+# BASIC FASTMCP PROJECT SETUP
+
+## MCP SERVER
+
+-- Install `uv`.
+
+-- Create project:
+
+```bash
+uv init fastmcp-demo-server
+```
+
+-- Open the project in VS Code.
+
+-- Install FastMCP:
+
+```bash
+uv add fastmcp
+```
+
+-- Check FastMCP:
+
+```bash
+fastmcp version
+```
+
+or:
+
+```bash
+uv run fastmcp version
+```
+
+-- Create `main.py` containing the MCP server.
+
+-- Check development commands:
+
+```bash
+uv run fastmcp dev --help
+```
+
+-- Run the server with the MCP Inspector:
+
+```bash
+uv run fastmcp dev inspector main.py
+```
+
+-- MCP Inspector provides a development/testing interface
+for interacting with the MCP server.
+
+-- Run the MCP server normally:
+
+```bash
+uv run fastmcp run main.py
+```
+
+-- Optional Claude Desktop integration:
+
+```bash
+uv run fastmcp install claude-desktop main.py
+```
+
+# MCP CLIENT WITH LANGCHAIN
+
+-- Install `uv`.
+
+-- Create a new project:
+
+```bash
+uv init
+```
+
+-- Add required packages:
+
+```bash
+uv add langchain langchain-openai langchain-mcp-adapters python-dotenv streamlit
+```
+
+-- `langchain-mcp-adapters` provides integration between
+LangChain and MCP.
+
+-- `MultiServerMCPClient` can connect to multiple MCP servers.
+
+-- Example:
+
+```python
+from langchain_mcp_adapters.client import MultiServerMCPClient
+
+client = MultiServerMCPClient(SERVERS)
+```
+
+-- The client can then retrieve the tools exposed by
+the connected MCP servers.
+
+# BASIC MCP SERVER EXAMPLE
+
+```python
+from fastmcp import FastMCP
+
+mcp = FastMCP("math-mcp-server")
 
 
-### BASIC PROJECT SETUP EXAMPLE:
+@mcp.tool()
+async def add(x, y):
+    """Add two numbers."""
+    return x + y
 
-- install uv
-- create a project folder name fastmcp-demo-server
-- open folder in vscode
-- open terminal
-- execute command uv init
-- uv add fastmcp
-- fastmcp version or uv run fastmcp version
-- create a basic server
-- uv run fastmcp dev --help
-- test server: uv run fastmcp dev inspector main.py
-  this will open a server with tool called mcp inspector
-- run server: uv run fastmcp run main.py 
-- optional: 
-  add server to claude desktop: uv run fastmcp install claude-desktop main.py
+
+@mcp.tool()
+async def square_root(x):
+    """Calculate the square root of a number."""
+    return x ** 0.5
+
+
+if __name__ == "__main__":
+    mcp.run()
+```
+
+-- `FastMCP()`:
+Creates the MCP server.
+
+-- `@mcp.tool()`:
+Exposes a Python function as an MCP tool.
+
+-- `async def`:
+Defines an asynchronous Python function.
+
+-- `**`:
+Exponentiation / power operator.
+
+-- `** 2`:
+Square.
+
+-- `** 0.5`:
+Square root.
+
+# HELPER FUNCTIONS IN MCP TOOLS
+
+-- MCP tools often use helper functions to validate
+or convert their inputs.
+
+-- Example:
+
+```python
+def _as_number(x):
+
+    if isinstance(x, (int, float)):
+        return x
+
+    if isinstance(x, str):
+        return float(x.strip())
+
+    raise TypeError(
+        f"Expected int, float, or numeric string, "
+        f"got {type(x).__name__}"
+    )
+```
+
+-- `_as_number()` is NOT a Python built-in.
+
+-- It is a custom helper function.
+
+-- `isinstance()` checks the type of a value.
+
+-- `float()` converts a numeric string into a floating-point
+number.
+
+-- `strip()` removes surrounding whitespace.
+
+-- `TypeError` is raised when the input type is unsupported.
+
+-- The leading `_` is a naming convention commonly used
+for helper/internal functions.
+
+# MCP RESOURCES AND FILE DATA
+
+-- A server can expose application data through resources.
+
+-- Example:
+
+```text
+expense://categories
+```
+
+-- This URI can identify the authoritative category data
+used by an expense-tracking MCP server.
+
+-- The server can provide data such as:
+
+```text
+Food
+    Groceries
+    Restaurants
+
+Transport
+    Fuel
+    Public Transport
+```
+
+-- The AI/application can use this information rather than
+inventing categories.
+
+# IMPORTANT MCP MENTAL MODEL
+
+```text
+                    MCP
+                     │
+          Standardized communication
+                     │
+             ┌───────┴───────┐
+             │               │
+          Client           Server
+             │               │
+          Host/AI       Exposes capabilities
+          Application         │
+                              │
+                  ┌───────────┼───────────┐
+                  ↓           ↓           ↓
+                Tools     Resources     Prompts
+                  │           │           │
+                Action       Data       Guidance
+```
+
+-- Remember:
+
+MCP is the protocol.
+
+FastMCP is a framework/library that makes implementing
+MCP applications easier.
+
+An MCP server exposes capabilities.
+
+An MCP client connects to those capabilities.
+
+The AI application/host uses the MCP client.
+
+JSON-RPC 2.0 defines the message structure.
+
+Transport defines how those messages are exchanged.
+
+Tools perform actions.
+
+Resources provide data/context.
+
+Prompts provide reusable instructions/templates.
+
+```
+
+
 
